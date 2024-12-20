@@ -1,0 +1,188 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Weather App</title>
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/tailwindcss/2.2.19/tailwind.min.css" rel="stylesheet">
+    <style>
+        .glass {
+            background: rgba(255, 255, 255, 0.2);
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            border: 1px solid rgba(255, 255, 255, 0.18);
+        }
+        .weather-gradient {
+            background: linear-gradient(120deg, #a1c4fd 0%, #c2e9fb 100%);
+        }
+        .loading {
+            animation: spin 1s linear infinite;
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+    </style>
+</head>
+<body class="weather-gradient min-h-screen flex items-center justify-center p-4">
+    <div class="max-w-md w-full">
+        <!-- Search Box -->
+        <div class="mb-8">
+            <div class="relative">
+                <input type="text" 
+                       id="cityInput"
+                       placeholder="Enter city name" 
+                       class="w-full px-6 py-4 rounded-full text-gray-700 focus:outline-none focus:ring-2 focus:ring-blue-400 shadow-lg">
+                <button onclick="getWeather()" 
+                        class="absolute right-2 top-2 bg-blue-500 text-white px-6 py-2 rounded-full hover:bg-blue-600 transition-colors">
+                    Search
+                </button>
+            </div>
+        </div>
+
+        <!-- Weather Card -->
+        <div id="weatherCard" class="glass rounded-3xl p-8 text-white shadow-xl hidden">
+            <div class="flex justify-between items-start mb-8">
+                <div>
+                    <h2 id="cityName" class="text-4xl font-bold mb-2">Rabat, MA</h2>
+                    <p id="dateTime" class="text-lg opacity-90"></p>
+                </div>
+                <div class="text-right">
+                    <img id="weatherIcon" src="" alt="Weather Icon" class="w-20 h-20">
+                    <p id="weatherDescription" class="text-lg capitalize"></p>
+                </div>
+            </div>
+
+            <div class="grid grid-cols-2 gap-8">
+                <div>
+                    <h3 class="text-6xl font-bold mb-4">
+                        <span id="temperature"></span>°C
+                    </h3>
+                    <p class="text-lg">Feels like: <span id="feelsLike"></span>°C</p>
+                </div>
+                
+                <div class="grid grid-cols-2 gap-4">
+                    <div>
+                        <p class="text-sm opacity-90">Humidity</p>
+                        <p class="text-xl font-semibold"><span id="humidity"></span>%</p>
+                    </div>
+                    <div>
+                        <p class="text-sm opacity-90">Wind Speed</p>
+                        <p class="text-xl font-semibold"><span id="windSpeed"></span> m/s</p>
+                    </div>
+                    <div>
+                        <p class="text-sm opacity-90">Pressure</p>
+                        <p class="text-xl font-semibold"><span id="pressure"></span> hPa</p>
+                    </div>
+                    <div>
+                        <p class="text-sm opacity-90">Visibility</p>
+                        <p class="text-xl font-semibold"><span id="visibility"></span> km</p>
+                    </div>
+                </div>
+            </div>
+
+            <div class="mt-8 pt-6 border-t border-white border-opacity-20">
+                <div class="flex justify-between">
+                    <div>
+                        <p class="text-sm opacity-90">Sunrise</p>
+                        <p id="sunrise" class="text-lg font-semibold"></p>
+                    </div>
+                    <div>
+                        <p class="text-sm opacity-90">Sunset</p>
+                        <p id="sunset" class="text-lg font-semibold"></p>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Loading Spinner -->
+        <div id="loadingSpinner" class="hidden text-center">
+            <div class="loading inline-block w-8 h-8 border-4 border-blue-500 border-t-transparent rounded-full"></div>
+        </div>
+
+        <!-- Error Message -->
+        <div id="errorMessage" class="hidden text-center bg-red-500 text-white p-4 rounded-lg">
+            City not found. Please try again.
+        </div>
+    </div>
+
+    <script>
+        const API_KEY = 'c95e22eab4bec38258c5b0e07cc72a5e';
+        const weatherCard = document.getElementById('weatherCard');
+        const loadingSpinner = document.getElementById('loadingSpinner');
+        const errorMessage = document.getElementById('errorMessage');
+
+        async function getWeather() {
+            const cityInput = document.getElementById('cityInput');
+            const city = cityInput.value.trim();
+            
+            if (!city) return;
+
+            // Show loading, hide other elements
+            loadingSpinner.classList.remove('hidden');
+            weatherCard.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+
+            try {
+                const response = await fetch(`https://api.openweathermap.org/data/2.5/weather?q=${city},MA&appid=${API_KEY}&units=metric`);
+                const data = await response.json();
+
+                if (data.cod === '404') {
+                    throw new Error('City not found');
+                }
+
+                updateWeatherUI(data);
+                weatherCard.classList.remove('hidden');
+            } catch (error) {
+                errorMessage.classList.remove('hidden');
+            } finally {
+                loadingSpinner.classList.add('hidden');
+            }
+        }
+
+        function updateWeatherUI(data) {
+            // Update city and weather info
+            document.getElementById('cityName').textContent = `${data.name}, ${data.sys.country}`;
+            document.getElementById('temperature').textContent = Math.round(data.main.temp);
+            document.getElementById('feelsLike').textContent = Math.round(data.main.feels_like);
+            document.getElementById('weatherDescription').textContent = data.weather[0].description;
+            document.getElementById('humidity').textContent = data.main.humidity;
+            document.getElementById('windSpeed').textContent = data.wind.speed;
+            document.getElementById('pressure').textContent = data.main.pressure;
+            document.getElementById('visibility').textContent = (data.visibility / 1000).toFixed(1);
+
+            // Update weather icon
+            const iconCode = data.weather[0].icon;
+            document.getElementById('weatherIcon').src = `https://openweathermap.org/img/wn/${iconCode}@2x.png`;
+
+            // Update date and time
+            const now = new Date();
+            document.getElementById('dateTime').textContent = now.toLocaleDateString('en-US', {
+                weekday: 'long',
+                year: 'numeric',
+                month: 'long',
+                day: 'numeric'
+            });
+
+            // Update sunrise and sunset times
+            const sunriseTime = new Date(data.sys.sunrise * 1000);
+            const sunsetTime = new Date(data.sys.sunset * 1000);
+            document.getElementById('sunrise').textContent = sunriseTime.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+            document.getElementById('sunset').textContent = sunsetTime.toLocaleTimeString('en-US', {
+                hour: '2-digit',
+                minute: '2-digit'
+            });
+        }
+
+        // Allow Enter key to trigger search
+        document.getElementById('cityInput').addEventListener('keypress', (e) => {
+            if (e.key === 'Enter') {
+                getWeather();
+            }
+        });
+    </script>
+</body>
+</html>
